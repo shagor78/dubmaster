@@ -1,0 +1,6 @@
+{
+  "name": "DubMaster AI",
+  "description": "Professional Windows desktop AI video dubbing software for automatic language detection, transcription, translation, voice dubbing, and video synchronization.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

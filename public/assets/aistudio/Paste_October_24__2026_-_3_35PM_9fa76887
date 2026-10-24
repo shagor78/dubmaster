@@ -1,0 +1,815 @@
+# Project: DubMaster AI — Complete Windows-Based AI Video Dubbing Software
+
+## 1. Project Overview
+
+Build a complete, professional, Windows-based desktop application called **DubMaster AI**.
+
+The application must allow users to upload or import a video, automatically detect its original spoken language, transcribe the speech, translate it into a selected target language, generate natural-sounding dubbed audio, and export a new video with the translated voice.
+
+The application must work as a real desktop tool on Windows 10 and Windows 11.
+
+This is not a website, not a static UI prototype, and not merely a command-line script. Build a fully functional desktop application with a modern graphical user interface, a reliable processing pipeline, real AI integrations, live progress reporting, and video export.
+
+### Primary use case
+
+For example:
+- Import a video spoken in English.
+- Automatically detect that its original language is English.
+- Select Bengali as the target language.
+- Transcribe the original speech.
+- Translate the transcript from English to Bengali.
+- Generate Bengali voice audio.
+- Synchronize the Bengali voice with the original video.
+- Export a new video containing Bengali dubbing.
+
+The software must also support the reverse direction and other supported language combinations.
+
+Examples:
+- English → Bengali
+- Bengali → English
+- English → Hindi
+- Hindi → Bengali
+- Bengali → Hindi
+- Chinese → Bengali
+- Chinese → Hindi
+- Hindi → English
+- English → Chinese
+
+Support additional languages whenever the selected speech recognition, translation, and text-to-speech engines support them.
+
+All application interface text must be in English. Users must be able to dub videos into Bengali, Hindi, English, Chinese, and other supported languages.
+
+---
+
+## 2. Recommended Technology Stack
+
+Build the application using a maintainable desktop architecture.
+
+### Desktop application
+- Python 3.11 or another version supported by all selected AI libraries.
+- PySide6 for the desktop graphical user interface.
+- Qt Multimedia or an appropriate embedded media player for video preview.
+- QThread, QThreadPool, or a proper background worker architecture for long-running tasks.
+- SQLite for local project history, settings, and processing metadata.
+- Pydantic for validated configuration and data structures.
+
+### Video and audio processing
+- FFmpeg and FFprobe for media inspection, audio extraction, audio conversion, synchronization, and final video rendering.
+- MoviePy only if needed for a specific operation; prefer FFmpeg for reliable media processing.
+- PyAV or another suitable media library if necessary.
+- Temporary working directories for intermediate audio, subtitles, and generated voice tracks.
+
+### AI speech recognition
+Implement a pluggable speech recognition interface.
+
+Preferred options:
+- Faster-Whisper for local speech-to-text.
+- Whisper-compatible models for language detection and transcription.
+- Optional cloud speech recognition adapters when configured.
+
+The application must identify the likely spoken language from the actual audio and display the detected language and confidence when the engine provides a reliable confidence estimate.
+
+Do not infer the spoken language from the video filename.
+
+### Translation
+Create a translation service interface supporting:
+- A configurable cloud translation API.
+- An optional locally hosted translation model.
+- Language-aware translation and preservation of meaning.
+- Proper handling of Bengali, Hindi, English, Chinese, punctuation, and names.
+
+Do not claim translation works offline unless an offline translation model has actually been installed and configured.
+
+### Text-to-speech
+Implement a provider-based text-to-speech system.
+
+Possible integrations:
+- A configurable cloud TTS provider with multilingual voices.
+- An appropriate offline TTS engine.
+- Additional providers through a common adapter interface.
+
+For each provider, check whether the requested target language and selected voice are actually supported.
+
+Allow users to select a voice when multiple compatible voices are available.
+
+The architecture must support adding new AI providers without rewriting the entire application.
+
+### Packaging
+- PyInstaller for packaging the application.
+- A Windows installer such as Inno Setup, if practical.
+- A bundled or automatically provisioned FFmpeg executable, subject to licensing and redistribution requirements.
+
+The final application must be runnable as a normal Windows desktop program, without requiring users to open a terminal for everyday operations.
+
+---
+
+## 3. Main Application Interface
+
+Create a polished, professional desktop UI inspired by modern video editing and AI productivity applications.
+
+### Main layout
+
+Use a sidebar navigation layout with these sections:
+
+1. Dashboard
+2. New Dubbing Project
+3. Projects
+4. Subtitle Editor
+5. Audio and Voices
+6. Processing Queue
+7. Settings
+8. Help and About
+
+The interface should include:
+- A dark theme as the default.
+- An optional light theme.
+- A professional video preview area.
+- Clear buttons and status indicators.
+- A timeline or audio-track visualization where practical.
+- Responsive resizing for different Windows screen resolutions.
+- Useful empty states, error messages, and loading indicators.
+
+Do not create decorative buttons that do nothing. Every visible action must have a working implementation or be clearly marked as unavailable.
+
+---
+
+## 4. Dashboard
+
+The dashboard must show:
+
+- A prominent "Create New Project" button.
+- A recent projects list.
+- Number of completed projects.
+- Number of currently processing projects.
+- Number of failed jobs.
+- Recent export history.
+- AI provider connection status.
+- Available disk space for temporary files where practical.
+- Model status and whether local models are installed.
+
+Each project entry should display:
+- Project name.
+- Original filename.
+- Source language.
+- Target language.
+- Last modified date.
+- Current status.
+- Progress percentage.
+- Output location, when exported.
+
+Allow users to reopen, rename, duplicate, or delete projects.
+
+---
+
+## 5. Import Video
+
+Implement a complete media import workflow.
+
+Supported input formats should include common formats such as:
+- MP4
+- MKV
+- MOV
+- AVI
+- WebM
+- Other formats that the installed FFmpeg build can decode.
+
+Users must be able to:
+- Browse and select a video file.
+- Drag and drop a video into the application.
+- See the filename and file size.
+- See video duration, resolution, frame rate, and available audio tracks.
+- Preview the video.
+- Select an audio track when multiple tracks exist.
+- Choose a project name.
+- Select the original video language or use automatic detection.
+
+Before processing, inspect the file with FFprobe and validate that a usable video and/or audio stream exists.
+
+Show clear errors for unsupported, corrupted, or audio-less files.
+
+Do not silently overwrite an existing video.
+
+Support large files using streaming or chunked processing where appropriate instead of loading the entire video into RAM.
+
+---
+
+## 6. Original Language Detection
+
+After a video is imported, provide a button named "Detect Original Language".
+
+The application must:
+1. Extract the selected audio track.
+2. Analyze actual speech using the configured speech recognition engine.
+3. Detect the likely source language.
+4. Display the detected language in a clear information panel.
+5. Show the language code when available.
+6. Display a confidence value only when the selected engine provides a meaningful estimate.
+7. Allow users to override the detected language manually.
+
+Example interface:
+
+Original Language: English
+
+Detection Status: Completed
+
+Detection Method: Automatic speech recognition
+
+Target Language: Bengali
+
+Allow users to select:
+- Auto Detect
+- Bengali
+- English
+- Hindi
+- Chinese
+- Other supported languages.
+
+Treat Chinese variants and regional language codes correctly when supported by the selected provider.
+
+If detection fails or speech is too short, ask the user to select the original language manually.
+
+Do not falsely claim 100% detection accuracy.
+
+---
+
+## 7. Target Language Selection
+
+Create a dedicated target-language selector.
+
+Users must be able to choose the desired output language independently of the detected original language.
+
+Examples:
+- Original: English → Target: Bengali
+- Original: Bengali → Target: English
+- Original: Hindi → Target: Bengali
+- Original: Chinese → Target: Hindi
+
+The target language must control both the translation language and the generated speech language.
+
+Display:
+- Source language.
+- Target language.
+- Translation provider.
+- Selected TTS provider.
+- Available target-language voices.
+
+Validate that the configured translation and speech providers support the selected language pair.
+
+If a provider does not support the requested language, explain the limitation and offer compatible alternatives when available.
+
+---
+
+## 8. Complete AI Dubbing Pipeline
+
+Implement the dubbing pipeline as a real sequence of independently tracked stages.
+
+### Stage 1: Media Analysis
+- Inspect the input file.
+- Detect video and audio streams.
+- Read duration and technical metadata.
+- Prepare a project workspace.
+
+### Stage 2: Audio Extraction
+- Extract the selected audio track using FFmpeg.
+- Convert it to the format required by the speech recognition engine.
+- Preserve the original video for later rendering.
+
+### Stage 3: Speech Recognition
+- Transcribe the original speech.
+- Detect or validate the source language.
+- Produce timestamped speech segments.
+- Preserve segment start and end times.
+- Support long videos through appropriate chunking.
+
+### Stage 4: Transcript Review
+- Show the original transcript.
+- Display timestamps for each segment.
+- Allow users to correct recognition errors.
+- Let users edit individual segments before translation.
+
+### Stage 5: Translation
+- Translate the transcript into the selected target language.
+- Preserve meaning, names, context, and punctuation.
+- Keep segment timestamps and segment identifiers.
+- Support retrying failed translations.
+- Allow users to edit the translated transcript.
+
+### Stage 6: Voice Generation
+- Convert each translated segment into speech using the selected TTS provider.
+- Use a compatible target-language voice.
+- Save generated audio segments separately.
+- Retry failed segments without unnecessarily regenerating successful ones.
+- Record the provider, voice, duration, and generation status for each segment.
+
+### Stage 7: Audio Synchronization
+- Place each generated segment at the appropriate timestamp.
+- Adjust segment placement to fit the original timeline.
+- Use reasonable speaking-rate adjustments when supported.
+- Handle gaps between spoken segments.
+- Prevent overlapping speech wherever possible.
+- Avoid cutting off the final words of a sentence.
+- Apply configurable audio fades and normalization.
+
+If translated speech is longer than the original speech, offer appropriate options:
+- Adjust speaking rate within safe limits.
+- Extend pauses when practical.
+- Allow the dubbed audio to extend beyond the original speech.
+- Use an optional advanced timing mode.
+
+Never silently delete words simply to force the translation to fit the original duration.
+
+### Stage 8: Audio Mixing
+
+Provide these audio modes:
+
+1. **Replace Original Speech**: Replace the original audio track with generated dubbing.
+2. **Dubbing with Original Background Audio**: Mix the dubbed speech with available background music and ambient sound.
+3. **Keep Original Audio Quietly**: Retain the original audio at a user-configurable lower volume.
+4. **Dubbed Audio Only**: Export a separate audio file containing the generated voice.
+
+Important: Lowering the volume of the original audio does not remove its speech. Clearly explain that preserving background music while removing original speech may require source separation, which is an optional advanced feature.
+
+### Stage 9: Final Rendering
+- Combine the processed audio with the original video using FFmpeg.
+- Preserve the original resolution and frame rate unless the user selects different export settings.
+- Use suitable video and audio codecs.
+- Support MP4 export as the primary output format.
+- Optionally support MKV and separate WAV or MP3 audio exports.
+- Show the final output location.
+- Verify that the exported file exists and is playable.
+
+The final video must contain the requested target-language dubbing, not merely translated subtitles.
+
+---
+
+## 9. Live Processing Progress
+
+This is a critical feature.
+
+Users must be able to see how much of the entire dubbing job has completed.
+
+Display a prominent progress panel with:
+- Overall progress percentage.
+- Current processing stage.
+- Stage-specific progress.
+- Elapsed time.
+- Estimated remaining time when enough reliable data is available.
+- Current operation.
+- Processing speed where applicable.
+- Completed and remaining speech segments.
+- Warnings and errors.
+
+Example:
+
+Project: English to Bengali Dubbing
+
+Media Analysis: Completed
+
+Audio Extraction: Completed
+
+Speech Recognition: Completed
+
+Translation: 100%
+
+Voice Generation: 62%
+
+Audio Synchronization: Waiting
+
+Final Rendering: Waiting
+
+Overall Progress: 58%
+
+Current Status: Generating Bengali speech
+
+The percentages above are illustrative only. Calculate and display real progress from actual task events.
+
+### Progress calculation
+
+Use a weighted stage-based progress system with documented weights.
+
+For example:
+- Media Analysis: 5%
+- Audio Extraction: 10%
+- Speech Recognition: 20%
+- Translation: 15%
+- Voice Generation: 25%
+- Audio Synchronization and Mixing: 10%
+- Final Rendering and Verification: 15%
+
+The weights must total 100%.
+
+Within each stage, use actual progress events whenever possible.
+
+For operations that do not provide granular progress, show an honest indeterminate progress indicator instead of inventing a precise percentage.
+
+Update the interface without freezing or blocking the main UI thread.
+
+Use background workers, signals, and safe cancellation handling.
+
+Persist job state so that the application can recover project information after restarting.
+
+Allow users to cancel a job safely. Clean up temporary files only when it is safe to do so.
+
+---
+
+## 10. Transcript and Subtitle Editor
+
+Build a functional editor with two synchronized columns:
+
+Left column: Original Transcript
+
+Right column: Translated Transcript
+
+Each row must show:
+- Segment number.
+- Start timestamp.
+- End timestamp.
+- Original text.
+- Translated text.
+- Audio generation status.
+
+Features:
+- Edit original text.
+- Edit translated text.
+- Add or remove segments.
+- Adjust timestamps.
+- Preview a generated segment.
+- Regenerate audio for a selected segment.
+- Translate a selected segment again.
+- Search text.
+- Play the video from a segment timestamp.
+- Save edits automatically or through an explicit Save button.
+
+Provide optional subtitle export:
+- SRT
+- VTT
+
+Subtitle export is supplementary. The main feature remains spoken-language dubbing.
+
+---
+
+## 11. Voice and Audio Settings
+
+Create a dedicated audio configuration panel.
+
+Users should be able to configure:
+- Target-language voice.
+- Voice gender or style where the provider supports such choices.
+- Speaking rate.
+- Speech volume.
+- Audio normalization.
+- Background audio volume.
+- Silence between segments.
+- Audio fade-in and fade-out.
+- Optional speaker separation.
+
+Allow users to preview voices using a short sample before starting the complete dubbing job.
+
+Do not claim to clone a person's voice unless an explicitly configured provider supports voice cloning and the user has the required authorization.
+
+Voice cloning must be an optional feature, not a requirement for basic dubbing.
+
+Do not impersonate a real person without appropriate authorization.
+
+---
+
+## 12. Multiple Speakers
+
+Implement a speaker-aware architecture.
+
+When the speech recognition engine supports word or segment timestamps and the selected diarization engine is available:
+- Detect distinct speakers.
+- Label segments as Speaker 1, Speaker 2, and so on.
+- Allow users to assign different target-language voices to different speakers.
+- Preserve speaker assignments during translation and audio generation.
+- Generate separate tracks or segment files for each speaker when practical.
+
+If speaker diarization is unavailable, allow manual speaker assignments or use a single voice.
+
+Clearly distinguish automated speaker estimates from confirmed identities.
+
+---
+
+## 13. Project Management
+
+Users must be able to save and reopen dubbing projects.
+
+Persist:
+- Original video path.
+- Media metadata.
+- Source and target languages.
+- Original transcript.
+- Translated transcript.
+- Segment timestamps.
+- Speaker assignments.
+- Selected AI providers.
+- Voice settings.
+- Generated segment references.
+- Processing status.
+- Export settings.
+- Final output path.
+
+Use SQLite for project metadata and a dedicated workspace for project assets.
+
+Example workspace:
+
+Documents/DubMasterAI/
+- projects/
+- temporary/
+- models/
+- exports/
+- logs/
+
+Do not store large media files directly inside SQLite.
+
+Provide:
+- Create project.
+- Save project.
+- Reopen project.
+- Rename project.
+- Duplicate project.
+- Delete project.
+- Open output folder.
+
+Warn users before deleting projects containing source media or generated files.
+
+---
+
+## 14. Settings and AI Provider Configuration
+
+Create a professional Settings page.
+
+### AI Provider Settings
+- Speech recognition provider.
+- Translation provider.
+- Text-to-speech provider.
+- API endpoint, where configurable.
+- API key entry.
+- Connection testing.
+- Default source language.
+- Default target language.
+- Default voice.
+- Default export format.
+
+### Local AI Settings
+- Installed speech recognition models.
+- Model download and installation status.
+- CPU or GPU processing mode where supported.
+- Available memory information.
+- Device compatibility checks.
+- Cache directory.
+- Model storage location.
+
+Support a CPU-only configuration. GPU acceleration must be optional and enabled only when the required hardware and libraries are available.
+
+Do not automatically download very large AI models without informing the user.
+
+### Security
+- Never hardcode API keys.
+- Store sensitive credentials using Windows Credential Manager or another suitable secure credential store.
+- Redact credentials from logs.
+- Provide a way to remove configured API keys.
+- Never upload a user's video to a cloud provider without making the data transfer clear.
+
+---
+
+## 15. Offline and Online Modes
+
+Support two clearly defined modes.
+
+### Local Processing Mode
+Use installed local models for supported tasks.
+
+Depending on installed models, this mode may provide:
+- Local speech recognition.
+- Local translation.
+- Local text-to-speech.
+- Local FFmpeg rendering.
+- Local project storage.
+
+Clearly display which operations are available offline.
+
+### Cloud-Assisted Mode
+Use configured cloud services for supported operations.
+
+Advantages may include:
+- Higher-quality speech recognition.
+- More natural voices.
+- Faster translation.
+- More language choices.
+
+Show the selected provider and disclose when media or transcript content must be sent to an external service.
+
+Never advertise full offline functionality if one or more required AI stages depend on a cloud API.
+
+---
+
+## 16. Source Speech Separation and Background Music
+
+Add an optional advanced feature for users who want to preserve background music while replacing speech.
+
+When a compatible source-separation model is installed:
+- Separate vocals or speech from accompaniment where supported.
+- Allow the user to preview the separated tracks.
+- Use the accompaniment track as the background.
+- Mix the newly generated dubbed speech over it.
+
+Provide a fallback mode if separation is unavailable.
+
+Explain that music, sound effects, and speech may not be separated perfectly.
+
+Do not make source separation mandatory for basic video dubbing.
+
+---
+
+## 17. Error Handling and Recovery
+
+Implement robust handling for:
+- Missing FFmpeg.
+- Invalid video files.
+- Missing audio streams.
+- Speech recognition errors.
+- Unsupported language combinations.
+- Translation API failures.
+- TTS provider failures.
+- API quota limits.
+- Network interruptions.
+- Expired API credentials.
+- Insufficient disk space.
+- Out-of-memory errors.
+- Interrupted rendering.
+- Cancelled jobs.
+
+Display useful, human-readable messages in the UI.
+
+Provide a detailed local log file with timestamps and technical diagnostics, but never expose secrets.
+
+Retry transient failures with bounded retries and sensible backoff.
+
+Allow the user to retry failed segments instead of restarting the entire project.
+
+Use atomic output handling so an incomplete render is not mistaken for a finished video.
+
+---
+
+## 18. Recommended Project Structure
+
+Create a clean Python desktop project:
+
+```text
+dubmaster-ai/
+├── app.py
+├── requirements.txt
+├── README.md
+├── .env.example
+├── .gitignore
+├── src/
+│   ├── ui/
+│   │   ├── main_window.py
+│   │   ├── dashboard.py
+│   │   ├── project_view.py
+│   │   ├── transcript_editor.py
+│   │   ├── settings_view.py
+│   │   ├── progress_panel.py
+│   │   └── styles/
+│   ├── core/
+│   │   ├── project_manager.py
+│   │   ├── job_manager.py
+│   │   ├── progress_manager.py
+│   │   ├── task_queue.py
+│   │   └── config.py
+│   ├── media/
+│   │   ├── probe.py
+│   │   ├── audio_extractor.py
+│   │   ├── audio_mixer.py
+│   │   ├── synchronizer.py
+│   │   └── video_renderer.py
+│   ├── ai/
+│   │   ├── speech_recognition/
+│   │   ├── translation/
+│   │   ├── text_to_speech/
+│   │   ├── language_detection.py
+│   │   └── speaker_diarization.py
+│   ├── database/
+│   │   ├── models.py
+│   │   ├── repository.py
+│   │   └── migrations/
+│   ├── workers/
+│   │   ├── dubbing_worker.py
+│   │   ├── transcription_worker.py
+│   │   ├── translation_worker.py
+│   │   ├── tts_worker.py
+│   │   └── rendering_worker.py
+│   └── utils/
+│       ├── logging_config.py
+│       ├── file_validation.py
+│       └── exceptions.py
+├── tests/
+│   ├── test_language_detection.py
+│   ├── test_translation.py
+│   ├── test_progress.py
+│   ├── test_synchronization.py
+│   └── test_project_manager.py
+└── packaging/
+    └── windows/
+```
+
+You may adjust the structure when necessary, but keep UI, AI services, media processing, and data persistence separated.
+
+---
+
+## 19. Implementation Plan
+
+Work directly in the existing repository.
+
+### Phase 1: Foundation
+- Inspect the current project and available files.
+- Verify the Python environment.
+- Create the desktop application skeleton.
+- Build the main window, sidebar, dashboard, and theme.
+- Implement application settings and SQLite persistence.
+
+### Phase 2: Media Import
+- Integrate FFmpeg and FFprobe.
+- Implement video import and media inspection.
+- Add a video preview player.
+- Extract audio and validate input files.
+
+### Phase 3: AI Integration
+- Integrate actual speech recognition.
+- Implement automatic language detection.
+- Add a working translation provider.
+- Add a working target-language TTS provider.
+- Test English, Bengali, Hindi, and Chinese where the chosen providers support them.
+
+### Phase 4: Dubbing Pipeline
+- Implement timestamped transcription.
+- Implement editable translations.
+- Generate dubbed speech segments.
+- Synchronize the generated audio.
+- Mix audio and render the final video.
+
+### Phase 5: Progress and Reliability
+- Add background workers.
+- Implement real progress reporting.
+- Implement cancellation, retries, and recovery.
+- Prevent the UI from freezing during long jobs.
+
+### Phase 6: Project Management
+- Save and reopen projects.
+- Persist transcripts and generated audio references.
+- Add project history and export management.
+- Implement safe temporary-file cleanup.
+
+### Phase 7: Quality Assurance
+- Test with short English, Bengali, Hindi, and Chinese samples where supported.
+- Test large files and long-running jobs.
+- Test missing credentials and network failures.
+- Test cancellation and retry behavior.
+- Verify that the exported video actually contains the target-language speech.
+- Fix all critical bugs.
+
+### Phase 8: Windows Packaging
+- Package the working application using PyInstaller.
+- Verify FFmpeg availability in the packaged build.
+- Include installation and first-run instructions.
+- Provide a Windows installer if practical.
+- Test the application on a clean Windows environment.
+
+---
+
+## 20. Definition of Done
+
+The project is complete only when:
+
+1. The Windows desktop application launches successfully.
+2. A user can import a real video.
+3. The application can inspect the video and its audio.
+4. The application can detect the spoken language when supported.
+5. The user can choose a different target language.
+6. The original speech can be transcribed into timestamped segments.
+7. The transcript can be translated and edited.
+8. The selected TTS provider generates real target-language speech.
+9. The generated speech can be synchronized with the original video.
+10. The user can monitor real processing progress.
+11. The user can cancel and retry jobs safely.
+12. The finished video can be exported and played.
+13. The user can save and reopen projects.
+14. Errors are displayed clearly and logged locally.
+15. No fake AI responses or simulated processing results are presented as real.
+16. The application can be packaged for Windows.
+17. The README documents setup, AI provider configuration, limitations, and usage.
+
+## Final Instructions to the Coding Agent
+
+Start by inspecting the repository and the installed Python version.
+
+Then implement the application incrementally, testing each major feature before moving on.
+
+Do not generate the entire project as a collection of untested code snippets. Create real files, integrate the components, run the application, and fix the errors you encounter.
+
+Prioritize a reliable English-to-Bengali dubbing workflow first. Once it works end to end, expand to Bengali-to-English, Hindi, Chinese, and other supported language pairs.
+
+Use actual AI integrations. Clearly distinguish implemented functionality from features that still require API keys, model downloads, or additional configuration.
+
+The final result must be a working Windows desktop AI video dubbing application with accurate progress reporting, editable translations, synchronized speech, and real video export.
